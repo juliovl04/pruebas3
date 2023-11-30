@@ -3,18 +3,41 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
 
-public class NewBehaviourScript : MonoBehaviour
+public class CameraPointerManager : MonoBehaviour
 {
+    public static CameraPointerManager Instance;
     [SerializeField] private GameObject pointer;
     [SerializeField] private float maxDistancePointer = 4.5f;
     private readonly string interactableTag = "Interactable";
     private float scaleSize = 0.025f;
+    [HideInInspector]
+    public Vector3 hitPoint;
+    private void Awake()
+    {
+        if(Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
+    }
     [Range(0, 1)]
     [SerializeField] private float distPointerObject = 0.95f;
 
 
     private const float _maxDistance = 10;
     private GameObject _gazedAtObject = null;
+    private void Start()
+    {
+        GazeManager.Instance.OnGazeSelection += GazeSelection;
+    }
+
+    private void GazeSelection()
+    {
+        _gazedAtObject?.SendMessage("OnPointerClick", null, SendMessageOptions.DontRequireReceiver);
+    }
 
     /// <summary>
     /// Update is called once per frame.
@@ -26,13 +49,14 @@ public class NewBehaviourScript : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(transform.position, transform.forward, out hit, _maxDistance))
         {
-            // GameObject detected in front of the camera.
+            hitPoint = hit.point;
             if (_gazedAtObject != hit.transform.gameObject)
             {
                 // New GameObject.
-                _gazedAtObject?.SendMessage("OnPointerExit", null, SendMessageOptions.DontRequireReceiver);
+                _gazedAtObject?.SendMessage("OnPointerExitXR", null, SendMessageOptions.DontRequireReceiver);
                 _gazedAtObject = hit.transform.gameObject;
-                _gazedAtObject.SendMessage("OnPointerEnter", null, SendMessageOptions.DontRequireReceiver);
+                _gazedAtObject.SendMessage("OnPointerEnterXR", null, SendMessageOptions.DontRequireReceiver);
+                GazeManager.Instance.StartGazeSelection();
             }
             if (hit.transform.CompareTag(interactableTag))
             {
